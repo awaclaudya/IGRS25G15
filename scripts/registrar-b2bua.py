@@ -40,22 +40,14 @@ class kamailio:
                 KSR.tm.t_relay()   # Forwarding using transaction mode
                 return 1                
 
-            if (KSR.pv.get("$td") != "sipnet.a"):       # Check if To domain is sipnet.a
-#                KSR.forward()       # Forwarding to a different network using statless mode
-                KSR.tm.t_relay()   # Forwarding using transaction mode
-                KSR.rr.record_route()  # Add Record-Route header
-                return 1
+#DOMAIN CHECK
 
-            if (KSR.pv.get("$td") == "sipnet.a"):             # Check if To domain is sipnet.a (unnecessary duplicate)
-                if (KSR.registrar.lookup("location") == 1):   # Check if registered
-#                    KSR.info("  lookup changed R-URI to : " + KSR.pv.get("$ru") +"\n")
-#                    KSR.forward()       # Forwarding to UA contact using statless mode
-                    KSR.tm.t_relay()   # Forwarding using transaction mode
-                    KSR.rr.record_route()  # Add Record-Route header
-                    return 1
-                else:
-                    KSR.sl.send_reply(404, "Not found")
-                    return 1
+
+#PIN CHECK
+        if (msg.Method == "MESSAGE"):
+
+
+
 
         if (msg.Method == "ACK"):
             KSR.info("ACK R-URI: " + KSR.pv.get("$ru") + "\n")
