@@ -1,9 +1,6 @@
 import sys
 import KSR as KSR
 
-body = ""
-r_user = ""
-r_domain = ""
 # Mandatory function - module initiation
 def mod_init():
     KSR.info("===== from Python mod init\n")
@@ -19,14 +16,20 @@ class kamailio:
         KSR.info('===== kamailio.child_init(%d)\n' % rank)
         return 0
 
-    r_user = KSR.pv.get("$rU")
-    r_domain = KSR.pv.get("$rd")
-    body = KSR.pv.get("$rb")
+
+# Function called for messages sent/transit
+def ksr_onsend_route(self, msg):
+    # Comment out the logging to avoid errors with msg.Type
+    # KSR.info("===== onsend route - from kamailio python script:")
+    # KSR.info("   %s\n" %(msg.Type))
+    return 1
+        
+
     # Function called for REQUEST messages received 
     def ksr_request_route(self, msg):
         
         # Handle Instant Messages (SIP MESSAGE)
-        if (msg.Method == "MESSAGE"):
+        if KSR.is_method("MESSAGE"):
             
             # 1. SPECIAL CASE: PIN Validation Service
             # We must check this FIRST. If we relay this, it will timeout (408).
@@ -68,7 +71,7 @@ class kamailio:
             return 1
 
         # Working as a Registrar server
-        if  (msg.Method == "REGISTER"):
+        if KSR.is_method("REGISTER"):
             domain = KSR.pv.get("$td") # <--- ALTERAÇÃO: Obter o domínio de destino ($td)
 
             KSR.info("REGISTER R-URI: " + KSR.pv.get("$ru") + "\n")      # Obtaining values via Pseudo-variables (pv)
@@ -87,7 +90,7 @@ class kamailio:
                 return 1
 
         # Working as a Redirect server
-        if (msg.Method == "INVITE"):                      
+        if KSR.is_method("INVITE"):                     
             KSR.info("INVITE R-URI: " + KSR.pv.get("$ru") + "\n")
             KSR.info("        From: " + KSR.pv.get("$fu") +
                               " To: " + KSR.pv.get("$tu") +"\n")
@@ -111,21 +114,21 @@ class kamailio:
                     KSR.sl.send_reply(404, "Not found")
                     return 1
 
-        if (msg.Method == "ACK"):
+        if KSR.is_method("ACK"):  
             KSR.info("ACK R-URI: " + KSR.pv.get("$ru") + "\n")
             KSR.rr.loose_route()  # In case there are Record-Route headers
             KSR.registrar.lookup("location")
             KSR.tm.t_relay()
             return 1
 
-        if (msg.Method == "BYE"):
+        if KSR.is_method("BYE"): 
             KSR.info("BYE R-URI: " + KSR.pv.get("$ru") + "\n")
             KSR.rr.loose_route()    # In case there are Record-Route headers
             KSR.registrar.lookup("location")
             KSR.tm.t_relay()
             return 1
 
-        if (msg.Method == "CANCEL"):
+        if KSR.is_method("CANCEL"): 
             KSR.info("CANCEL R-URI: " + KSR.pv.get("$ru") + "\n")
             KSR.rr.loose_route()    # In case there are Record-Route headers
             KSR.registrar.lookup("location")
