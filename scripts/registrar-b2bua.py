@@ -16,13 +16,12 @@ class kamailio:
         KSR.info('===== kamailio.child_init(%d)\n' % rank)
         return 0
 
-
-# Function called for messages sent/transit
-def ksr_onsend_route(self, msg):
-    # Comment out the logging to avoid errors with msg.Type
-    # KSR.info("===== onsend route - from kamailio python script:")
-    # KSR.info("   %s\n" %(msg.Type))
-    return 1
+    # Function called for messages sent/transit
+    def ksr_onsend_route(self, msg):
+        # Comment out the logging to avoid errors with msg.Type
+        # KSR.info("===== onsend route - from kamailio python script:")
+        # KSR.info("   %s\n" %(msg.Type))
+        return 1
         
 
     # Function called for REQUEST messages received 
