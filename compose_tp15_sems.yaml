@@ -5,9 +5,9 @@ services:
     networks:
       sipnet:
         aliases:        
-          - acme.operador  # DNS name and a server for both:
-          - sipnet.a    #  sipnet.a, and 
-          - acme.pt   #  sipnet.b
+          - sipnet.kamailio  # DNS name and a server for both:
+          - acme.operador    #  sipnet.a, and 
+          - sipnet.b    #  sipnet.b
     environment:
       - SIP_DOMAIN=sipnet.kamailio
       - WITH_DB=no
@@ -48,23 +48,6 @@ services:
       - ./scripts_aux/.asoundrc:/root/.asoundrc:ro
       - ./scripts_aux/start.sh:/root/start.sh:ro
       - twinkle-bob:/root/.twinkle
-    restart: unless-stopped
-
-terminal_validar:
-    image: twinkle:igrs_01
-    container_name: twinkle_validar
-    networks:
-      - acme
-    hostname: sipnet.alice
-    environment:
-      - DISPLAY=host.docker.internal:0
-    entrypoint: ["sh", "/root/start.sh"]
-    volumes:
-      - ./scripts/validar.cfg:/tmp/twinkle/validar.cfg:ro
-      - ./scripts/twinkle_validar.sys:/tmp/twinkle/twinkle.sys:ro
-      - ./scripts_aux/.asoundrc:/root/.asoundrc:ro
-      - ./scripts_aux/start.sh:/root/start.sh:ro
-      - twinkle-validar:/root/.twinkle
     restart: unless-stopped
 
 networks:
