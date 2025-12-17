@@ -16,49 +16,57 @@ class kamailio:
         KSR.info('===== kamailio.child_init(%d)\n' % rank)
         return 0
 
-    # -----------------------------------------------------------------
-    # Lógica Principal de Pedidos (REQUEST ROUTE)
-    # -----------------------------------------------------------------
-
+    # Function called for REQUEST messages received 
     def ksr_request_route(self, msg):
         
+        # Handle PIN Validation MESSAGE
+        if (msg.Method == "MESSAGE"):
+            # Use $rU and $rd to match 'validar@acme.pt'
+            r_user = KSR.pv.get("$rU")
+            r_domain = KSR.pv.get("$rd")
+
+            if (r_user == "validar" and r_domain == "acme.pt"):
+                # Use x.modf to force get the body safely if $rb fails
+                body = KSR.pv.get("$rb")
+                    
+                if body is None:
+                    KSR.err("MESSAGE: Body is null. Is textops module loaded?\n")
+                    KSR.sl.send_reply(400, "Missing PIN Body")
+                    return 1
+
+                pin = str(body).strip()
+                KSR.info("PIN Received: [" + pin + "] from " + str(KSR.pv.get("$fu")) + "\n")
+
+                if (pin == "0000"):
+                    KSR.info("PIN Validation Successful\n")
+                    KSR.sl.send_reply(200, "OK - PIN Valid")
+                    return 1
+                else:
+                    KSR.info("PIN check failed: " + pin + "\n")
+                    KSR.sl.send_reply(403, "Forbidden - Wrong PIN")
+                    return 1
+            else:
+                KSR.sl.send_reply(403, "Forbidden - Wrong destination")
+                return 1
+
         # Working as a Registrar server
         if  (msg.Method == "REGISTER"):
             domain = KSR.pv.get("$td") # <--- ALTERAÇÃO: Obter o domínio de destino ($td)
-            pin = 
 
             KSR.info("REGISTER R-URI: " + KSR.pv.get("$ru") + "\n")      # Obtaining values via Pseudo-variables (pv)
             KSR.info("            To: " + KSR.pv.get("$tu") +
                            " Contact: " + KSR.hdr.get("Contact") +
                            " Domain: " + domain + "\n") # <--- ALTERAÇÃO: Adicionar log do domínio
 
-            # -----------------------------------------------------------------
-            # Lógica de Verificação de DOMINIO para REGISTAR
-            # -----------------------------------------------------------------
+            # === Lógica de verificação de domínio para REGISTO ===
             if (domain == "acme.operador"): # <--- ALTERAÇÃO: Permitir registo SÓ se o domínio for "acme.operador"
                 KSR.info("Domain check passed for acme.operador. Saving location.\n")
-                KSR.sl.send_reply(200, "Valid Domain")
                 KSR.registrar.save('location', 0)                            # Calling Kamailio "registrar" module
+                return 1
             else:
                 KSR.info("Domain check failed. Rejecting registration for domain: " + domain + "\n")
                 KSR.sl.send_reply(403, "Forbidden Domain") # <--- ALTERAÇÃO: Rejeitar registo com 403 Forbidden
                 return 1
-
-            # -----------------------------------------------------------------
-            # Lógica de Verificação de PIN para REGISTAR
-            # -----------------------------------------------------------------
-            if (msg.Method == "MESSAGE"):
-                #Validar se o destino é o URI de validação
-                if (KSR.pv.get("$ru") == "sip:validar@acme.pt")
-                    pin = KSR.pv.get("$rb")
-
-                    if(pimn == "0000"):
-                        KSR.info("PIN Validation Successful for" + KSR.pv.get("$fu") + "\n")
-                        KSR.sl.send_reply(200, "OK - Valid PIN")
-                    else
-                        KSR.info("PIN check failed. Rejecting registration for PIN:" + pin + "\n")
-                        KSR.sl.send_reply(403, "Forbidden Domain")
-                        return 1                        
 
         # Working as a Redirect server
         if (msg.Method == "INVITE"):                      
@@ -66,6 +74,8 @@ class kamailio:
             KSR.info("        From: " + KSR.pv.get("$fu") +
                               " To: " + KSR.pv.get("$tu") +"\n")
             
+            pin = str(body).strip()
+
             # A special destination with the objective of failing...
             if (KSR.pv.get("$tu") == "sip:nobody@acme.operador"):       # To-URI for failing
                 KSR.pv.sets("$ru", "sip:nobody@sipnet.alice:9999") # R-URI replacement to a new destination
@@ -80,7 +90,7 @@ class kamailio:
                 KSR.rr.record_route()  # Add Record-Route header
                 return 1
 
-            if (KSR.pv.get("$td") == "acme.operador"):             # Check if To domain is sipnet.a (unnecessary duplicate)
+            if (KSR.pv.get("$td") == "acme.operador" or pin == "0000"):             # Check if To domain is sipnet.a (unnecessary duplicate)
                 if (KSR.registrar.lookup("location") == 1):   # Check if registered
 #                    KSR.info("  lookup changed R-URI to : " + KSR.pv.get("$ru") +"\n")
 #                    KSR.forward()       # Forwarding to UA contact using statless mode
