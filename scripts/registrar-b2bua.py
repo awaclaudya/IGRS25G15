@@ -1,6 +1,9 @@
 import sys
 import KSR as KSR
 
+body = ""
+r_user = ""
+r_domain = ""
 # Mandatory function - module initiation
 def mod_init():
     KSR.info("===== from Python mod init\n")
@@ -16,38 +19,53 @@ class kamailio:
         KSR.info('===== kamailio.child_init(%d)\n' % rank)
         return 0
 
+    r_user = KSR.pv.get("$rU")
+    r_domain = KSR.pv.get("$rd")
+    body = KSR.pv.get("$rb")
     # Function called for REQUEST messages received 
     def ksr_request_route(self, msg):
         
-        # Handle PIN Validation MESSAGE
+        # Handle Instant Messages (SIP MESSAGE)
         if (msg.Method == "MESSAGE"):
-            # Use $rU and $rd to match 'validar@acme.pt'
+            
+            # 1. SPECIAL CASE: PIN Validation Service
+            # We must check this FIRST. If we relay this, it will timeout (408).
             r_user = KSR.pv.get("$rU")
             r_domain = KSR.pv.get("$rd")
 
             if (r_user == "validar" and r_domain == "acme.pt"):
-                # Use x.modf to force get the body safely if $rb fails
                 body = KSR.pv.get("$rb")
-                    
+                
+                # Check if body is empty
                 if body is None:
-                    KSR.err("MESSAGE: Body is null. Is textops module loaded?\n")
-                    KSR.sl.send_reply(400, "Missing PIN Body")
+                    KSR.sl.send_reply(400, "Missing PIN")
                     return 1
 
                 pin = str(body).strip()
-                KSR.info("PIN Received: [" + pin + "] from " + str(KSR.pv.get("$fu")) + "\n")
+                KSR.info("PIN Received: " + pin + "\n")
 
                 if (pin == "0000"):
-                    KSR.info("PIN Validation Successful\n")
                     KSR.sl.send_reply(200, "OK - PIN Valid")
                     return 1
                 else:
-                    KSR.info("PIN check failed: " + pin + "\n")
                     KSR.sl.send_reply(403, "Forbidden - Wrong PIN")
                     return 1
-            else:
-                KSR.sl.send_reply(403, "Forbidden - Wrong destination")
-                return 1
+
+            # 2. NORMAL CHAT: Relay between local users (Alice <-> Bob)
+            # We only allow relaying if the domain is OUR domain (acme.operador)
+            if (KSR.pv.get("$td") == "acme.operador"):
+                if (KSR.registrar.lookup("location") == 1):
+                    KSR.tm.t_relay()
+                    return 1
+                else:
+                    KSR.sl.send_reply(404, "User Not Found")
+                    return 1
+
+            # 3. BLOCK EVERYTHING ELSE
+            # If it's not the validation service AND not a local user, reject it.
+            # Do NOT use t_relay() here, or you will get 408 Timeout.
+            KSR.sl.send_reply(403, "Forbidden - Wrong destination")
+            return 1
 
         # Working as a Registrar server
         if  (msg.Method == "REGISTER"):
@@ -73,29 +91,21 @@ class kamailio:
             KSR.info("INVITE R-URI: " + KSR.pv.get("$ru") + "\n")
             KSR.info("        From: " + KSR.pv.get("$fu") +
                               " To: " + KSR.pv.get("$tu") +"\n")
-            
-            pin = str(body).strip()
-
-            # A special destination with the objective of failing...
-            if (KSR.pv.get("$tu") == "sip:nobody@acme.operador"):       # To-URI for failing
-                KSR.pv.sets("$ru", "sip:nobody@sipnet.alice:9999") # R-URI replacement to a new destination
-                
-                # Definition of on_failure for INVITE
-                KSR.tm.t_relay()   # Forwarding using transaction mode
-                return 1                
+              
 
             if (KSR.pv.get("$td") != "acme.operador"):       # Check if To domain is sipnet.a
 #                KSR.forward()       # Forwarding to a different network using statless mode
-                KSR.tm.t_relay()   # Forwarding using transaction mode
                 KSR.rr.record_route()  # Add Record-Route header
+                #KSR.tm.t_relay()    # Forwarding using transaction mode
+                KSR.sl.send_reply(403, "Forbidden - Wrong destination")
                 return 1
 
-            if (KSR.pv.get("$td") == "acme.operador" or pin == "0000"):             # Check if To domain is sipnet.a (unnecessary duplicate)
+            if (KSR.pv.get("$td") == "acme.operador"):             # Check if To domain is sipnet.a (unnecessary duplicate)
                 if (KSR.registrar.lookup("location") == 1):   # Check if registered
 #                    KSR.info("  lookup changed R-URI to : " + KSR.pv.get("$ru") +"\n")
 #                    KSR.forward()       # Forwarding to UA contact using statless mode
-                    KSR.tm.t_relay()   # Forwarding using transaction mode
                     KSR.rr.record_route()  # Add Record-Route header
+                    KSR.tm.t_relay()  # Forwarding using transaction mode
                     return 1
                 else:
                     KSR.sl.send_reply(404, "Not found")
