@@ -47,7 +47,29 @@ class kamailio:
                 KSR.info("PIN Received: " + pin + "\n")
 
                 if (pin == "0000"):
-                    KSR.sl.send_reply(200, "OK - PIN Valid")
+                    KSR.info("PIN Valid. Registering user: " + KSR.pv.get("$fu") + "\n")
+                    KSR.registrar.save('location', 0) 
+                    KSR.sl.send_reply(200, "OK - Registered via PIN")
+                    return 1
+                else:
+                    KSR.sl.send_reply(403, "Forbidden - Wrong PIN")
+                    return 1
+
+            if (r_user == "redial" and r_domain == "acme.operador"):
+                body = KSR.pv.get("$rb")
+                
+                # Check if body is empty
+                if body is None:
+                    KSR.sl.send_reply(400, "Missing Message")
+                    return 1
+
+                message = str(body).strip()
+                KSR.info("Message Received: " + message + "\n")
+
+                if (message == "ACTIVE"):
+                    KSR.info("PIN Valid. Registering user: " + KSR.pv.get("$fu") + "\n")
+                    KSR.registrar.save('location', 0) 
+                    KSR.sl.send_reply(200, "OK - Registered via PIN")
                     return 1
                 else:
                     KSR.sl.send_reply(403, "Forbidden - Wrong PIN")
