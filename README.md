@@ -1,6 +1,7 @@
 # IGRS25G15 - Serviço de Chamadas e Redial 2.0
 Este projeto implementa uma infraestrutura de VoIP baseada em Kamailio e Twinkle, permitindo o registo de utilizadores, chamadas básicas e um utilização de serviço de Redial 2.0. 
 
+
 *⚙️  Funcionalidades*
 
 Registo e Desregisto: Gestão de utilizadores do domínio acme.operador.
@@ -18,6 +19,8 @@ Registo e Desregisto: Gestão de utilizadores do domínio acme.operador.
 + twinkle alice / bob / max: Terminais de utilizador pré-configurados.
 
 + scripts/: Contém ficheiros .cfg e .sys para os perfis dos utilizadores.
+
+
 
 *📋 Como Utilizar*
 
@@ -37,8 +40,8 @@ Conteúdo: 0000
 3. Configurar o Serviço Redial 2.0
 Para ativar o serviço de redial automático em caso de falha, é necessário enviar uma SIP MESSAGE para o serviço interno:
 
-Destino: sip:redial@acme.operador
-Ativar: ACTIVATE sip:utilizador1 sip:utilizador2
+Destino: redial@acme.operador
+Ativar: ACTIVATE utilizador1 utilizador2
 
 Desativar: DEACTIVATE
 
