@@ -2,7 +2,7 @@
 # Minimal system settings
 
 # Startup
-start_user_profile=Alice
+start_user_profile=Max
 # Network
 sip_port=5080
 rtp_port=8888
